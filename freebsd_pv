@@ -1,0 +1,73 @@
+#!/usr/bin/perl
+# Copyright (c) 2011
+# Distilled Media Ltd.  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the author nor the names of any contributors to the
+#    software may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+#
+# Monitors PV usage for a FreeBSD system.
+#
+
+use strict;
+use warnings;
+
+# Configuration
+if ($ARGV[0] && $ARGV[0] eq "config") {
+	print "graph_title PV Entries\n";
+	print "graph_category system\n";
+	print "graph_args -l 0\n";
+	print "used.label used\n";
+	print "used.draw AREA\n";
+	print "used.warning 75\n";
+	print "used.critical 90\n";
+	print "free.label free\n";
+	print "free.draw STACK\n";
+	exit(0);
+}
+
+# Get the data from sysctl
+my $total = 0;
+my $used = 0;
+if (open(SYSCTL, "/sbin/sysctl vm.pmap.pv_entry_count vm.pmap.pv_entry_max 2>&1 |")) {
+	while (<SYSCTL>) {
+		chomp;
+		if (/^vm\.pmap\.pv_entry_max: (\d+)/o) {
+			$total = $1;
+		} elsif (/^vm\.pmap\.pv_entry_count: (\d+)/o) {
+			$used = $1;
+		}
+	}
+	close(SYSCTL);
+}
+
+# Turn it into percentages
+my $used_pc = sprintf("%.3f", ($total > 0 ? (($used / $total) * 100) : 0));
+if ($used_pc > 100) {
+	$used_pc = 100;
+}
+my $free_pc = sprintf("%.3f", 100 - $used_pc);
+
+print "used.value $used_pc\n";
+print "free.value $free_pc\n";
