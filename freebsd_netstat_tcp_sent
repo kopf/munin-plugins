@@ -1,0 +1,133 @@
+#!/usr/bin/perl
+# Copyright (c) 2011
+# Distilled Media Ltd.  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the author nor the names of any contributors to the
+#    software may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+#
+# Monitors the output from `netstat -s -p tcp` on a FreeBSD system.
+#
+
+use strict;
+use warnings;
+
+# Configuration.
+if (@ARGV && $ARGV[0] eq 'config') {
+	print <<CONFIG;
+graph_title Netstat: TCP: Sent
+graph_category network
+graph_args -l 0 --vertical-label Packets
+graph_order sent ack urg_only control window_probe window_update resend_for_mtu retransmitted retransmitted_unnecessarily
+sent.label sent
+sent.draw AREA
+sent.info data packets
+sent.type COUNTER
+ack.label ack
+ack.draw STACK
+ack.info ack-only packets
+ack.type COUNTER
+urg_only.label urg_only
+urg_only.draw STACK
+urg_only.info URG only packets
+urg_only.type COUNTER
+control.label control
+control.draw STACK
+control.info control packets
+control.type COUNTER
+window_probe.label window_probe
+window_probe.draw STACK
+window_probe.info window probe packets
+window_probe.type COUNTER
+window_update.label window_update
+window_update.draw STACK
+window_update.info window update packets
+window_update.type COUNTER
+resend_for_mtu.label resend_for_mtu
+resend_for_mtu.draw STACK
+resend_for_mtu.info resends initiated by MTU discovery
+resend_for_mtu.type COUNTER
+retransmitted.label retransmitted
+retransmitted.draw STACK
+retransmitted.info data packets retransmitted
+retransmitted.type COUNTER
+retransmitted_unnecessarily.label retransmitted_unnecessarily
+retransmitted_unnecessarily.draw STACK
+retransmitted_unnecessarily.info data packets unnecessarily retransmitted
+retransmitted_unnecessarily.type COUNTER
+CONFIG
+	exit 0;
+}
+
+# Gather the data.
+my $ack_only = 0;
+my $control = 0;
+my $resend_for_mtu = 0;
+my $retransmitted = 0;
+my $retransmitted_unnecessarily = 0;
+my $sent = 0;
+my $urg_only = 0;
+my $window_probe = 0;
+my $window_update = 0;
+if (open(NETSTAT, "netstat -s -p tcp |")) {
+	my $sent_stanza = 0;
+	while (<NETSTAT>) {
+		if (/^\s+\d+ packets sent/o && $sent_stanza == 0) {
+			$sent_stanza = 1;
+		} elsif (/^\s+\d+ packets received/o) {
+			$sent_stanza = -1;
+		} elsif ($sent_stanza > 0) {
+			if (/^\s+(\d+)\s+data\s+packets\s+\(\d+ bytes\)\s*$/o) {
+				$sent = $1;
+			} elsif (/^\s+(\d+)\s+data\s+packets\s+\(\d+ bytes\)\s+retransmitted\s*$/o) {
+				$retransmitted = $1;
+			} elsif (/^\s+(\d+)\s+data\s+packets\s+unnecessarily\s+retransmitted\s*$/o) {
+				$retransmitted_unnecessarily = $1;
+			} elsif (/^\s+(\d+)\s+resends\s+initiated\s+by\s+MTU\s+discovery\s*$/o) {
+				$resend_for_mtu = $1;
+			} elsif (/^\s+(\d+)\s+ack-only\s+packets\s+\(\d+\s+delayed\)\s*$/o) {
+				$ack_only = $1;
+			} elsif (/^\s+(\d+)\s+URG\s+only\s+packets\s*$/o) {
+				$urg_only = $1;
+			} elsif (/^\s+(\d+)\s+window\s+probe\s+packets\s*$/o) {
+				$window_probe = $1;
+			} elsif (/^\s+(\d+)\s+window\s+update\s+packets\s*$/o) {
+				$window_update = $1;
+			} elsif (/^\s+(\d+)\s+control\s+packets\s*$/o) {
+				$control = $1;
+			}
+		}
+	}
+}
+
+# Print the output
+print "ack.value $ack_only\n";
+print "control.value $control\n";
+print "resend_for_mtu.value $resend_for_mtu\n";
+print "retransmitted.value $retransmitted\n";
+print "retransmitted_unnecessarily.value $retransmitted_unnecessarily\n";
+print "sent.value $sent\n";
+print "urg_only.value $urg_only\n";
+print "window_probe.value $window_probe\n";
+print "window_update.value $window_update\n";

@@ -1,0 +1,137 @@
+#!/usr/bin/perl
+# Copyright (c) 2011
+# Distilled Media Ltd.  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the author nor the names of any contributors to the
+#    software may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+#
+# Monitors the output from `netstat -s -p tcp` on a FreeBSD system.
+#
+
+use strict;
+use warnings;
+
+# Define which entries we want to pick out of the netstat output.
+my %CONFIG = (
+	'metrics' => [
+		{
+			'name' => 'completed',
+			'regex' => qr/^\s+(\d+) completed\s*$/o,
+		},
+		{
+			'name' => 'retransmitted',
+			'regex' => qr/^\s+(\d+) retransmitted\s*$/o,
+		},
+		{
+			'name' => 'dupsyn',
+			'regex' => qr/^\s+(\d+) dupsyn\s*$/o,
+		},
+		{
+			'name' => 'dropped',
+			'regex' => qr/^\s+(\d+) dropped\s*$/o,
+		},
+		{
+			'name' => 'bucket_overflow',
+			'regex' => qr/^\s+(\d+) bucket overflow\s*$/o,
+		},
+		{
+			'name' => 'cache_overflow',
+			'regex' => qr/^\s+(\d+) cache overflow\s*$/o,
+		},
+		{
+			'name' => 'reset',
+			'regex' => qr/^\s+(\d+) reset\s*$/o,
+		},
+		{
+			'name' => 'stale',
+			'regex' => qr/^\s+(\d+) stale\s*$/o,
+		},
+		{
+			'name' => 'aborted',
+			'regex' => qr/^\s+(\d+) aborted\s*$/o,
+		},
+		{
+			'name' => 'badack',
+			'regex' => qr/^\s+(\d+) badack\s*$/o,
+		},
+		{
+			'name' => 'unreach',
+			'regex' => qr/^\s+(\d+) unreach\s*$/o,
+		},
+		{
+			'name' => 'zone_failures',
+			'regex' => qr/^\s+(\d+) zone failures\s*$/o,
+		},
+	],
+	'start' => qr/^\s+\d+ syncache entries added/o,
+	'end' => qr/^\s+\d+ cookies sent/o,
+);
+
+# Print configuration
+if (@ARGV && $ARGV[0] eq 'config') {
+	print "graph_title Netstat: TCP: SYN\n";
+	print "graph_category network\n";
+	print "graph_args -l 0 --vertical-label SYNs\n";
+	print "graph_order";
+	foreach my $metric (@{$CONFIG{'metrics'}}) {
+		print ' ' . $metric->{'name'};
+	}
+	print "\n";
+	my $first = 1;
+	foreach my $metric (@{$CONFIG{'metrics'}}) {
+		printf("%s.label %s\n", $metric->{'name'}, $metric->{'name'});
+		printf("%s.draw %s\n", $metric->{'name'}, ($first ? 'AREA' : 'STACK'));
+		if ($metric->{'description'}) {
+			printf("%s.info %s\n", $metric->{'name'}, $metric->{'description'});
+		}
+		printf("%s.type COUNTER\n", $metric->{'name'});
+		$first = 0;
+	}
+	exit 0;
+}
+
+# Gather the data.
+my %values;
+if (open(NETSTAT, "netstat -s -p tcp |")) {
+	my $started = 0;
+	while (<NETSTAT>) {
+		if ($_ =~ $CONFIG{'start'} && $started == 0) {
+			$started = 1;
+		} elsif ($_ =~ $CONFIG{'end'}) {
+			$started = -1;
+		} elsif ($started > 0) {
+			foreach my $metric (@{$CONFIG{'metrics'}}) {
+				if ($_ =~ $metric->{'regex'}) {
+					$values{$metric->{'name'}} = $1;
+				}
+			}
+		}
+	}
+}
+
+# Output the data.
+foreach my $name (sort keys %values) {
+	printf("%s.value %d\n", $name, $values{$name});
+}

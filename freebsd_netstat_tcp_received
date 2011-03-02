@@ -1,0 +1,189 @@
+#!/usr/bin/perl
+# Copyright (c) 2011
+# Distilled Media Ltd.  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the author nor the names of any contributors to the
+#    software may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+#
+# Monitors the output from `netstat -s -p tcp` on a FreeBSD system.
+#
+
+use strict;
+use warnings;
+
+# Monstrous configuration.
+if (@ARGV && $ARGV[0] eq 'config') {
+	print <<CONFIG;
+graph_title Netstat: TCP: Received
+graph_category network
+graph_args -l 0 --vertical-label Packets
+graph_order rcvd_in_seq out_of_order ack ack_duplicate ack_unsent after_close after_window window_probe window_update duplicates duplicates_old duplicates_partial discard_bad_checksum discard_bad_offset discard_memory discard_too_short
+ack.label ack
+ack.draw AREA
+ack.info acks
+ack.type COUNTER
+ack_duplicate.label ack_duplicate
+ack_duplicate.draw STACK
+ack_duplicate.info duplicate acks
+ack_duplicate.type COUNTER
+ack_unsent.label ack_unsent
+ack_unsent.draw STACK
+ack_unsent.info acks for unsent data
+ack_unsent.type COUNTER
+after_close.label after_close
+after_close.draw STACK
+after_close.info packets received after close
+after_close.type COUNTER
+after_window.label after_window
+after_window.draw STACK
+after_window.info packets of data after window
+after_window.type COUNTER
+discard_bad_checksum.label discard_bad_checksum
+discard_bad_checksum.draw STACK
+discard_bad_checksum.info discarded for bad checksums
+discard_bad_checksum.type COUNTER
+discard_bad_offset.label discard_bad_offset
+discard_bad_offset.draw STACK
+discard_bad_offset.info discarded for bad header offset fields
+discard_bad_offset.type COUNTER
+discard_memory.label discard_memory
+discard_memory.draw STACK
+discard_memory.info discarded due to memory problems
+discard_memory.type COUNTER
+discard_too_short.label discard_too_short
+discard_too_short.draw STACK
+discard_too_short.info discarded because packet too short
+discard_too_short.type COUNTER
+duplicates.label duplicates
+duplicates.draw STACK
+duplicates.info completely duplicate packets
+duplicates.type COUNTER
+duplicates_old.label duplicates_old
+duplicates_old.draw STACK
+duplicates_old.info old duplicate packets
+duplicates_old.type COUNTER
+duplicates_partial.label duplicates_partial
+duplicates_partial.draw STACK
+duplicates_partial.info packets with some dup. data
+duplicates_partial.type COUNTER
+out_of_order.label out_of_order
+out_of_order.draw STACK
+out_of_order.info out-of-order packets
+out_of_order.type COUNTER
+rcvd_in_seq.label rcvd_in_seq
+rcvd_in_seq.draw STACK
+rcvd_in_seq.info packets received in sequence
+rcvd_in_seq.type COUNTER
+window_probe.label window_probe
+window_probe.draw STACK
+window_probe.info window probes
+window_probe.type COUNTER
+window_update.label window_update
+window_update.draw STACK
+window_update.info window update packets
+window_update.type COUNTER
+CONFIG
+	exit 0;
+}
+
+# Gather the data
+my $ack = 0;
+my $ack_duplicate = 0;
+my $ack_unsent = 0;
+my $after_close = 0;
+my $after_window = 0;
+my $discard_bad_checksum = 0;
+my $discard_bad_offset = 0;
+my $discard_memory = 0;
+my $discard_too_short = 0;
+my $duplicates = 0;
+my $duplicates_old = 0;
+my $duplicates_partial = 0;
+my $out_of_order = 0;
+my $rcvd_in_seq = 0;
+my $window_probe = 0;
+my $window_update = 0;
+if (open(NETSTAT, "netstat -s -p tcp |")) {
+	my $rcvd_stanza = 0;
+	while (<NETSTAT>) {
+		if (/^\s+\d+ packets received/o && $rcvd_stanza == 0) {
+			$rcvd_stanza = 1;
+		} elsif (/^\s+\d+ connection requests/o) {
+			$rcvd_stanza = -1;
+		} elsif ($rcvd_stanza > 0) {
+			if (/^\s+(\d+) acks \(for \d+ bytes\)\s*$/o) {
+				$ack = $1;
+			} elsif (/^\s+(\d+) duplicate acks\s*$/o) {
+				$ack_duplicate = $1;
+			} elsif (/^\s+(\d+) acks for unsent data\s*$/o) {
+				$ack_unsent = $1;
+			} elsif (/^\s+(\d+) packets \(\d+ bytes\) received in-sequence\s*$/o) {
+				$rcvd_in_seq = $1;
+			} elsif (/^\s+(\d+) completely duplicate packets \(\d+ bytes\)\s*$/o) {
+				$duplicates = $1;
+			} elsif (/^\s+(\d+) old duplicate packets\s*$/o) {
+				$duplicates_old = $1;
+			} elsif (/^\s+(\d+) packets with some dup\. data \(\d+ bytes duped\)\s*$/o) {
+				$duplicates_partial = $1;
+			} elsif (/^\s+(\d+) out-of-order packets \(\d+ bytes\)\s*$/o) {
+				$out_of_order = $1;
+			} elsif (/^\s+(\d+) packets \(\d+ bytes\) of data after window\s*$/o) {
+				$after_window = $1;
+			} elsif (/^\s+(\d+) window probes\s*$/o) {
+				$window_probe = $1;
+			} elsif (/^\s+(\d+) window update packets\s*$/o) {
+				$window_update = $1;
+			} elsif (/^\s+(\d+) packets received after close\s*$/o) {
+				$after_close = $1;
+			} elsif (/^\s+(\d+) discarded for bad checksums\s*$/o) {
+				$discard_bad_checksum = $1;
+			} elsif (/^\s+(\d+) discarded for bad header offset fields\s*$/o) {
+				$discard_bad_offset = $1;
+			} elsif (/^\s+(\d+) discarded because packet too short\s*$/o) {
+				$discard_too_short = $1;
+			} elsif (/^\s+(\d+) discarded due to memory problems\s*$/o) {
+				$discard_memory = $1;
+			}
+		}
+	}
+}
+
+# Output the results
+print "ack.value $ack\n";
+print "ack_duplicate.value $ack_duplicate\n";
+print "ack_unsent.value $ack_unsent\n";
+print "after_close.value $after_close\n";
+print "after_window.value $after_window\n";
+print "discard_bad_checksum.value $discard_bad_checksum\n";
+print "discard_bad_offset.value $discard_bad_offset\n";
+print "discard_memory.value $discard_memory\n";
+print "discard_too_short.value $discard_too_short\n";
+print "duplicates.value $duplicates\n";
+print "duplicates_old.value $duplicates_old\n";
+print "duplicates_partial.value $duplicates_partial\n";
+print "out_of_order.value $out_of_order\n";
+print "rcvd_in_seq.value $rcvd_in_seq\n";
+print "window_probe.value $window_probe\n";
+print "window_update.value $window_update\n";
