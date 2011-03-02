@@ -1,0 +1,131 @@
+#!/usr/bin/perl
+# Copyright (c) 2011
+# Distilled Media Ltd.  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the author nor the names of any contributors to the
+#    software may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+#
+# Monitors MySQL cache hit ratios.
+#
+
+use strict;
+use warnings;
+
+my $MYSQLADMIN = $ENV{'mysqladmin'} || 'mysqladmin';
+my $MYSQLOPTS = $ENV{'mysqlopts'} || '';
+my $STATUS_COMMAND    = $MYSQLADMIN . ' ' . $MYSQLOPTS . ' extended-status';
+my $VARIABLES_COMMAND    = $MYSQLADMIN . ' ' . $MYSQLOPTS . ' variables';
+
+# Configuration
+if (@ARGV && $ARGV[0] eq "config") {
+	print "graph_title MySQL Caching Stats\n";
+	print "graph_vlabel %\n";
+	print "graph_category mysql\n";
+	print "graph_args --upper-limit 100 -l 0\n";
+	print "graph_scale no\n";
+	print "keybufferhit.label keybuffer\n";
+	print "keybufferhit.max 100\n";
+	print "querycachehit.label querycachehit\n";
+	print "querycachehit.max 100\n";
+	print "threadcachehit.label threadcachehit\n";
+	print "threadcachehit.max 100\n";
+	print "tablecachehit.label tablecachehit\n";
+	print "tablecachehit.max 100\n";
+	exit;
+}
+
+# The stats
+my $key_buffer_hit = 0;
+my $query_cache_hit = 0;
+my $thread_cache_hit = 0;
+my $table_cache_hit = 0;
+
+# Get the status variables
+my %status;
+if (open(MYSQLADMIN, "$STATUS_COMMAND |")) {
+	while (<MYSQLADMIN>) {
+		chomp;
+		if (/^\|\s+(.*?)\s+\|\s+(.*?)\s+\|$/o) {
+			$status{$1} = $2;
+		}
+	}
+	close(MYSQLADMIN);
+}
+
+# Get the tunable variables
+my %variables;
+if (open(MYSQLADMIN, "$VARIABLES_COMMAND |")) {
+	while (<MYSQLADMIN>) {
+		chomp;
+		if (/^\|\s+(.*?)\s+\|\s+(.*?)\s+\|$/o) {
+			$variables{$1} = $2;
+		}
+	}
+	close(MYSQLADMIN);
+}
+
+if (%status) {
+	$key_buffer_hit = sprintf("%.2f", 100 - (($status{'Key_reads'} / $status{'Key_read_requests'}) * 100));
+	$query_cache_hit = sprintf("%.2f", ($status{'Qcache_hits'} / ($status{'Com_select'} + $status{'Qcache_hits'})) * 100);
+	$thread_cache_hit = sprintf("%.2f", 100 - (($status{'Threads_created'} / $status{'Connections'}) * 100));
+	if (%variables) {
+		my $tc = ($variables{'table_cache'} ? $variables{'table_cache'} : ($variables{'table_open_cache'} ? $variables{'table_open_cache'} : 0));
+		$table_cache_hit = sprintf("%.2f", &table_cache_hit_rate($status{'Opened_tables'}, $tc));
+	}
+}
+
+print "keybufferhit.value $key_buffer_hit\n";
+print "querycachehit.value $query_cache_hit\n";
+print "threadcachehit.value $thread_cache_hit\n";
+print "tablecachehit.value $table_cache_hit\n";
+
+sub table_cache_hit_rate {
+	my $opened_tables = shift;
+	my $table_cache_limit = shift;
+
+	# Read the previous value of Opened_tables from the local cache
+	my $old_opened_tables = $opened_tables;
+	if (open(CACHE, "/tmp/table_cache_opened_tables_cache")) {
+		while (<CACHE>) {
+			chomp;
+			if (/^\d+$/o) {
+				$old_opened_tables = $_;
+				last;
+			}
+		}
+		close(CACHE);
+	}
+
+	# Now figure out how many tables have been opened since the last runtime
+	my $newly_opened_tables = $opened_tables - $old_opened_tables;
+
+	# Cache the current value of Opened_tables
+	if (open(CACHE, ">/tmp/table_cache_opened_tables_cache")) {
+		print CACHE "$opened_tables\n";
+		close(CACHE);
+	}
+
+	return ($table_cache_limit / ($newly_opened_tables + $table_cache_limit)) * 100;
+}
