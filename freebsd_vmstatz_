@@ -1,0 +1,83 @@
+#!/usr/bin/perl
+# Copyright (c) 2011
+# Distilled Media Ltd.  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the author nor the names of any contributors to the
+#    software may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+#
+# Monitors the output of `vmstat -z` on a FreeBSD system.
+#
+# This is a wildcard plugin which takes one name corresponding to a line in the
+# output of vmstat -z. For example, to monitor mbuf usage, symlink to this
+# plugin with the name 'freebsd_vmstatz_mbuf'.
+#
+#
+
+use strict;
+use warnings;
+
+# Figure out which stat we're tracking
+my $name;
+if ($0 =~ /freebsd_vmstatz_(.*)$/o) {
+	$name = $1;
+} else {
+	exit(1);
+}
+
+# Get the data from vmstat
+my $used = 0;
+my $cached = 0;
+my $limit = 0;
+if (open(SYSCTL, "vmstat -z |")) {
+	my $size;
+	while (<SYSCTL>) {
+		if (/^$name:\s*(\d+),\s+(\d+),\s+(\d+),\s+(\d+),/o) {
+			($size, $limit, $used, $cached) = ($1, $2, $3, $4);
+			$used *= $size;
+			$cached *= $size;
+			$limit *= $size;
+		}
+	}
+	close(SYSCTL);
+}
+
+if ($ARGV[0] && $ARGV[0] eq "config") {
+	print "graph_title VMStat: $name\n";
+	print "graph_category system\n";
+	print "graph_args --base 1024 -l 0 --vertical-label Bytes\n";
+	print "graph_order used cached\n";
+	print "used.label used\n";
+	print "used.draw AREA\n";
+	if ($limit > 0) {
+		printf("used.warning %d\n", ($limit * 0.75));
+		printf("used.critical %d\n", ($limit * 0.9));
+	}
+	print "cached.label free\n";
+	print "cached.draw STACK\n";
+	exit(0);
+} else {
+	print "used.value $used\n";
+	print "cached.value $cached\n";
+}
