@@ -1,0 +1,108 @@
+#!/usr/bin/perl
+# Copyright (c) 2011
+# Distilled Media Ltd.  All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the author nor the names of any contributors to the
+#    software may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+#
+# Monitors Snort via the perfmonitor preprocessor.
+#
+# This is a wildcard plugin. Examples:
+#
+# * Monitor the number of alerts per second:
+#		snort_alerts-sec
+#
+# `snort_ suggest` lists all the available options
+#
+
+use strict;
+use warnings;
+
+# Configurables
+my $SAMPLES = $ENV{'samples'} || 5;
+my $SNORT_STATS = $ENV{'snortstats'} || '/var/log/snort/snort.stats';
+my $TAIL = $ENV{'tail'} || '/usr/bin/tail';
+
+# All the columns we want to support
+my %COL = (
+	"pkts-dropped-pct" => { "index" => 1, "description" => "%pkts dropped" },
+	"mbits-sec" => { "index" => 2, "description" => "mbits/sec (wire)" },
+	"alerts-sec" => { "index" => 3, "description" => "alerts/sec" },
+);
+
+# Find out the columns which are wanted for this wildcard plugin
+my @cols_wanted;
+foreach my $col (sort keys %COL) {
+	if ($0 =~ /_$col(?:_|$)/) {
+		push @cols_wanted, $col;
+	}
+}
+
+# Deal with config, suggest, etc
+if (@ARGV) {
+	if ($ARGV[0] eq 'config') {
+		printf("graph_title Snort: %s\n", join(', ', @cols_wanted));
+		print "graph_category security\n";
+		foreach my $col (@cols_wanted) {
+			printf("%s.label %s\n", &munin_name($col), $COL{$col}{'description'});
+		}
+	} elsif ($ARGV[0] eq 'suggest') {
+		foreach (sort keys %COL) {
+			print "$_\n";
+		}
+	} else {
+		print "Bad args\n";
+	}
+	exit(0);
+}
+
+# Read the values and average each field.
+my @fields;
+if (open(SNORTSTATS, "$TAIL -n $SAMPLES $SNORT_STATS |")) {
+	while (<SNORTSTATS>) {
+		chomp;
+		my @f = split /,/o;
+		for (my $i = 0; $i < @f; $i++) {
+			$fields[$i] += $f[$i];
+		}
+	}
+}
+for (my $i = 0; $i < @fields; $i++) {
+	$fields[$i] /= 5;
+}
+
+# Now print the fields that we want.
+foreach my $col (@cols_wanted) {
+	printf("%s.value %f\n", &munin_name($col), $fields[$COL{$col}{'index'}]);
+}
+
+# Convert a name to a name safe to use for munin data items.
+sub munin_name {
+	my $name = shift;
+	$name =~ s/^\W+//o;
+	$name =~ s/\W+$//o;
+	$name =~ s/\W+/_/o;
+	return $name;
+}
