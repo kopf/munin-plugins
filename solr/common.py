@@ -9,5 +9,5 @@ def make_request(path):
     else:
         r = requests.get('http://%s:%s%s' %(SERVER, PORT, path))
     if r.status_code != 200:
-        return False
+        return None
     return r.text
