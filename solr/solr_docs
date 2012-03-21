@@ -54,12 +54,12 @@ else:
 	if CORES:
 		for core in CORES:
 			data = make_request('/solr/%s/admin/stats.jsp' % core)
-			process_data(data)
+			process_data(data, core)
 	else:
 		data = make_request('/solr/admin/stats.jsp')
 		process_data(data)
 
-def process_data(data):
+def process_data(data, core=None):
 	if data:
 		root = etree.fromstring(data)
 		core = root.xpath('/solr/solr-info/CORE')
@@ -69,4 +69,7 @@ def process_data(data):
 				stats = entry.xpath('stats')
 				for stat in stats[0]:
 					if stat.get("name") in ["numDocs"]:
-						print "docs.value", stat.text.strip()
+						if not core:
+							print "docs.value %s" % stat.text.strip()
+						else:
+							print "%s.value %s" %(core, stat.text.strip())
