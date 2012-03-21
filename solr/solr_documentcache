@@ -57,7 +57,6 @@ else:
 	if data:
 		root = etree.fromstring(data)
 		core = root.xpath('/solr/solr-info/CACHE')
-	
 		stat_list = []
 	
 		for entry in core[0].xpath('entry'):
