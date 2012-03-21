@@ -34,16 +34,32 @@ import sys
 from lxml import etree
 
 from common import make_request
+from settings import CORES
 
 if sys.argv[-1] == 'config':
 	print "graph_title Solr Query time"
 	print "graph_args -l 0"
 	print "graph_vlabel qtime"
 	print "graph_category search"
-	print "qtime.label Query time"
+	if CORES:
+		for core in CORES:
+			print "%s.label %s" % (core, core)
+			print "%s.info Query time for the %s core" %(core, core)
+			print "%s.type GAUGE"
+	else:
+		print "qtime.label Query time"
+		print "qtime.info Average query time"
+		print "qtime.type GAUGE"
 else:
-	data = make_request('/solr/admin/stats.jsp')
+	if CORES:
+		for core in CORES:
+			data = make_request('/solr/admin/stats.jsp')
+			process_data(data, core)
+	else:
+		data = make_request('/solr/admin/stats.jsp')
+		process_data(data)
 
+def process_data(data, core=None):
 	if data:
 		root = etree.fromstring(data)
 		core = root.xpath('/solr/solr-info/QUERYHANDLER')
@@ -53,4 +69,7 @@ else:
 				stats = entry.xpath('stats')
 				for stat in stats[0]:
 					if stat.get('name') == 'avgTimePerRequest':
-						print 'qtime' + '.value', stat.text.strip()
+						if core:
+							print '%s.value %s' % (core, stat.text.strip())
+						else:
+							print 'qtime.value %s' % stat.text.strip()
