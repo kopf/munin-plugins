@@ -34,7 +34,19 @@ import sys
 import re
 from lxml import etree
 
-from common import make_request
+def make_request(path):
+    try:
+        if AUTH:
+            r = requests.get('http://%s:%s%s' %(SERVER, PORT, path),
+                             auth=AUTH)
+        else:
+            r = requests.get('http://%s:%s%s' %(SERVER, PORT, path))
+    except Exception, e:
+        print e
+        sys.exit(-1)
+    if r.status_code != 200:
+        return None
+    return r.text
 
 if sys.argv[-1] == 'config':
 	print "graph_title Solr Document Cache"

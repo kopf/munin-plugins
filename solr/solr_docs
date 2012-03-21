@@ -35,7 +35,36 @@ import sys
 from lxml import etree
 
 from settings import CORES
-from common import make_request
+
+def make_request(path):
+    try:
+        if AUTH:
+            r = requests.get('http://%s:%s%s' %(SERVER, PORT, path),
+                             auth=AUTH)
+        else:
+            r = requests.get('http://%s:%s%s' %(SERVER, PORT, path))
+    except Exception, e:
+        print e
+        sys.exit(-1)
+    if r.status_code != 200:
+        return None
+    return r.text
+
+def process_data(data, core=None):
+	if data:
+		root = etree.fromstring(data)
+		core = root.xpath('/solr/solr-info/CORE')
+
+		for entry in core[0].xpath('entry'):
+			if entry[0].text.strip() == 'searcher':
+				stats = entry.xpath('stats')
+				for stat in stats[0]:
+					if stat.get("name") in ["numDocs"]:
+						if core:
+							print "%s.value %s" %(core, stat.text.strip())
+						else:
+							print "docs.value %s" % stat.text.strip()
+							
 
 if sys.argv[-1] == 'config':
 	print "graph_title Solr Docs"
@@ -59,17 +88,3 @@ else:
 		data = make_request('/solr/admin/stats.jsp')
 		process_data(data)
 
-def process_data(data, core=None):
-	if data:
-		root = etree.fromstring(data)
-		core = root.xpath('/solr/solr-info/CORE')
-
-		for entry in core[0].xpath('entry'):
-			if entry[0].text.strip() == 'searcher':
-				stats = entry.xpath('stats')
-				for stat in stats[0]:
-					if stat.get("name") in ["numDocs"]:
-						if core:
-							print "%s.value %s" %(core, stat.text.strip())
-						else:
-							print "docs.value %s" % stat.text.strip()
