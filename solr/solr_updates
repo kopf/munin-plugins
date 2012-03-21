@@ -34,16 +34,30 @@ import sys
 from lxml import etree
 
 from common import make_request
+from settings import CORES
 
 if sys.argv[-1] == 'config':
 	print "graph_title Solr Updates"
 	print "graph_args -l 0"
 	print "graph_vlabel ups"
 	print "graph_category search"
-	print "ups.label Updates per second"
+	if CORES:
+		for core in CORES:
+			print "%s.label %s" %(core, core)
+			print "%s.info Updates per second on the %s core" %(core, core)
+			print "%s.type GAUGE"
+	else:
+		print "ups.label Updates per second"
 else:
-	data = make_request('/solr/admin/stats.jsp')
+	if CORES:
+		for core in CORES:
+			data = make_request('/solr/%s/admin/stats.jsp' % core)
+			process_data(data, core)
+	else:
+		data = make_request('/solr/admin/stats.jsp')
+		process_data(data)
 
+def process_data(data, core=None):
 	if data:
 		root = etree.fromstring(data)
 		core = root.xpath('/solr/solr-info/QUERYHANDLER')
@@ -53,4 +67,7 @@ else:
 				stats = entry.xpath('stats')
 				for stat in stats[0]:
 					if stat.get("name") == 'avgRequestsPerSecond':
-						print "ups.value", stat.text.strip()
+						if core:
+							print "%s.value %s" % (core, stat.text.strip())
+						else:
+							print "ups.value %s" % stat.text.strip()
