@@ -34,7 +34,7 @@
 import sys
 import os
 import requests
-from lxml import etree
+from BeautifulSoup import BeautifulSoup
 
 SERVER = os.getenv('solr_server')
 PORT = os.getenv('solr_port')
@@ -61,18 +61,12 @@ def make_request(path):
 
 def process_data(data, core=None):
 	if data:
-		root = etree.fromstring(data)
-		core = root.xpath('/solr/solr-info/CORE')
-
-		for entry in core[0].xpath('entry'):
-			if entry[0].text.strip() == 'searcher':
-				stats = entry.xpath('stats')
-				for stat in stats[0]:
-					if stat.get("name") in ["numDocs"]:
-						if core:
-							print "%s.value %s" %(core, stat.text.strip())
-						else:
-							print "docs.value %s" % stat.text.strip()
+		soup = BeautifulSoup(data)
+		value = soup.find('stat', {'name': 'numDocs'}).text
+		if core:
+			print "%s.value %s" %(core, value)
+		else:
+			print "docs.value %s" % value
 							
 
 if sys.argv[-1] == 'config':
