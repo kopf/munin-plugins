@@ -53,7 +53,7 @@ if sys.argv[-1] == 'config':
 else:
 	if CORES:
 		for core in CORES:
-			data = make_request('/solr/admin/stats.jsp')
+			data = make_request('/solr/%s/admin/stats.jsp' % core)
 			process_data(data, core)
 	else:
 		data = make_request('/solr/admin/stats.jsp')
