@@ -69,7 +69,7 @@ def process_data(data, core=None):
 				stats = entry.xpath('stats')
 				for stat in stats[0]:
 					if stat.get("name") in ["numDocs"]:
-						if not core:
-							print "docs.value %s" % stat.text.strip()
-						else:
+						if core:
 							print "%s.value %s" %(core, stat.text.strip())
+						else:
+							print "docs.value %s" % stat.text.strip()
