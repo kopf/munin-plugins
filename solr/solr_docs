@@ -34,16 +34,32 @@
 import sys
 from lxml import etree
 
+from settings import CORES
 from common import make_request
 
 if sys.argv[-1] == 'config':
 	print "graph_title Solr Docs"
 	print "graph_vlabel docs"
-	print "docs.label Docs"
+	if CORES:
+		for core in CORES:
+			print "%s.label %s" %(core, core)
+			print "%s.info Number of documents in the %s core" %(core, core)
+			print "%s.type GAUGE"
+	else:
+		print "docs.label Docs"
+		print "docs.info Number of documents in the core"
+		print "docs.type GAUGE"
 	print "graph_category search"
 else:
-	data = make_request('/solr/admin/stats.jsp')
+	if CORES:
+		for core in CORES:
+			data = make_request('/solr/%s/admin/stats.jsp' % core)
+			process_data(data)
+	else:
+		data = make_request('/solr/admin/stats.jsp')
+		process_data(data)
 
+def process_data(data):
 	if data:
 		root = etree.fromstring(data)
 		core = root.xpath('/solr/solr-info/CORE')
