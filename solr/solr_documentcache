@@ -31,8 +31,19 @@
 #
 
 import sys
+import os
 import re
+import requests
 from lxml import etree
+
+SERVER = os.getenv('solr_server')
+PORT = os.getenv('solr_port')
+CORES = os.getenv('solr_cores')
+if CORES:
+    CORES = CORES.split(',')
+AUTH = os.getenv('solr_auth')
+if AUTH:
+    AUTH = tuple(AUTH.split(':'))
 
 def make_request(path):
     try:
