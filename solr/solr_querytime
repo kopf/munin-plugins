@@ -78,7 +78,7 @@ if sys.argv[-1] == 'config':
 	print "graph_title Solr Query time"
 	print "graph_args -l 0"
 	print "graph_vlabel qtime"
-	print "graph_category search"
+	print "graph_category solr"
 	if CORES:
 		for core in CORES:
 			print "%s.label %s" % (core, core)
