@@ -83,7 +83,7 @@ if sys.argv[-1] == 'config':
 		for core in CORES:
 			print "%s.label %s" % (core, core)
 			print "%s.info Query time for the %s core" %(core, core)
-			print "%s.type GAUGE"
+			print "%s.type GAUGE" % core
 	else:
 		print "qtime.label Query time"
 		print "qtime.info Average query time"

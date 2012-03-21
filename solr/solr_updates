@@ -82,7 +82,7 @@ if sys.argv[-1] == 'config':
 		for core in CORES:
 			print "%s.label %s" %(core, core)
 			print "%s.info Updates per second on the %s core" %(core, core)
-			print "%s.type GAUGE"
+			print "%s.type GAUGE" % core
 	else:
 		print "ups.label Updates per second"
 else:
