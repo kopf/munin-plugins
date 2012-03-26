@@ -58,7 +58,7 @@ def make_request(path):
         return None
     return r.text
 
-def process_data(data, core=None):
+def process_data(data, core_name=None):
 	if data:
 		root = etree.fromstring(data)
 		core = root.xpath('/solr/solr-info/QUERYHANDLER')
@@ -68,8 +68,8 @@ def process_data(data, core=None):
 				stats = entry.xpath('stats')
 				for stat in stats[0]:
 					if stat.get("name") == 'avgRequestsPerSecond':
-						if core:
-							print "%s.value %s" % (core, stat.text.strip())
+						if core_name:
+							print "%s.value %s" % (core_name, stat.text.strip())
 						else:
 							print "ups.value %s" % stat.text.strip()
 
