@@ -37,28 +37,28 @@ use POSIX;
 
 # End of life dates for each release.
 my %KNOWN_EOLS = (
-	'6.0' => POSIX::mktime(0, 0, 0, 30, 10, 106),
-	'6.1' => POSIX::mktime(0, 0, 0, 31, 4, 108),
-	'6.2' => POSIX::mktime(0, 0, 0, 31, 4, 108),
-	'6.3' => POSIX::mktime(0, 0, 0, 31, 0, 110),
-	'6.4' => POSIX::mktime(0, 0, 0, 30, 10, 110),
-	'7.0' => POSIX::mktime(0, 0, 0, 30, 3, 109),
-	'7.1' => POSIX::mktime(0, 0, 0, 31, 0, 111),
-	'7.2' => POSIX::mktime(0, 0, 0, 30, 5, 110),
-	'7.3' => POSIX::mktime(0, 0, 0, 31, 2, 112),
-	'7.4' => POSIX::mktime(0, 0, 0, 28, 1, 113),
-	'8.0' => POSIX::mktime(0, 0, 0, 30, 10, 110),
-	'8.1' => POSIX::mktime(0, 0, 0, 31, 6, 112),
-	'8.2' => POSIX::mktime(0, 0, 0, 29, 1, 112),
+    '6.0' => POSIX::mktime(0, 0, 0, 30, 10, 106),
+    '6.1' => POSIX::mktime(0, 0, 0, 31, 4, 108),
+    '6.2' => POSIX::mktime(0, 0, 0, 31, 4, 108),
+    '6.3' => POSIX::mktime(0, 0, 0, 31, 0, 110),
+    '6.4' => POSIX::mktime(0, 0, 0, 30, 10, 110),
+    '7.0' => POSIX::mktime(0, 0, 0, 30, 3, 109),
+    '7.1' => POSIX::mktime(0, 0, 0, 31, 0, 111),
+    '7.2' => POSIX::mktime(0, 0, 0, 30, 5, 110),
+    '7.3' => POSIX::mktime(0, 0, 0, 31, 2, 112),
+    '7.4' => POSIX::mktime(0, 0, 0, 28, 1, 113),
+    '8.0' => POSIX::mktime(0, 0, 0, 30, 10, 110),
+    '8.1' => POSIX::mktime(0, 0, 0, 31, 6, 112),
+    '8.2' => POSIX::mktime(0, 0, 0, 29, 1, 112),
 );
 
 # Configuration
 if ($ARGV[0] && $ARGV[0] eq "config") {
-	print "graph_title OS Days Since EOL\n";
-	print "graph_vlabel days\n";
-	print "graph_category system\n";
-	print "eol.label eol\n";
-	exit(0);
+    print "graph_title OS Days Since EOL\n";
+    print "graph_vlabel days\n";
+    print "graph_category system\n";
+    print "eol.label eol\n";
+    exit(0);
 }
 
 # Get the release
@@ -69,15 +69,15 @@ $release =~ s/^(\d+(?:\.\d+)*).*$/$1/o;
 # Find the number of days since the EOL.
 my $eol_time = 0;
 if ($KNOWN_EOLS{$release}) {
-	$eol_time = time() - $KNOWN_EOLS{$release};
+    $eol_time = time() - $KNOWN_EOLS{$release};
 }
 $eol_time /= 86400;
 if ($eol_time < 0) {
-	$eol_time = 0;
+    $eol_time = 0;
 } elsif ($eol_time > 720) {
-	# Cap it at 720 days to prevent graphs getting screwed up by ancient
-	# releases.
-	$eol_time = 720;
+    # Cap it at 720 days to prevent graphs getting screwed up by ancient
+    # releases.
+    $eol_time = 720;
 }
 
 printf("eol.value %.1f\n", $eol_time);

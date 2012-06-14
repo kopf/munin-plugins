@@ -32,16 +32,16 @@
 
 # Configuration
 if [ "X$1X" = "XconfigX" ]; then
-	echo "graph_title Known Vulnerabilities"
-	echo "graph_vlabel vulnerabilities"
-	echo "graph_category system"
-	echo "vulnerabilities.label vulnerabilities"
-	exit 0;
+    echo "graph_title Known Vulnerabilities"
+    echo "graph_vlabel vulnerabilities"
+    echo "graph_category system"
+    echo "vulnerabilities.label vulnerabilities"
+    exit 0;
 fi
 
 # Find the number of vulnerabilities
 NUM_VULNS="`/usr/bin/env PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin /usr/local/sbin/portaudit -X 1 -a 2>&1 | /usr/bin/egrep '^[0-9][0-9]* problem.s. in your installed packages found.' | /usr/bin/cut -d' ' -f1`"
 if [ "X${NUM_VULNS}X" = "XX" ]; then
-	NUM_VULNS="0"
+    NUM_VULNS="0"
 fi
 echo "vulnerabilities.value $NUM_VULNS"

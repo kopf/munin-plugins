@@ -35,29 +35,29 @@ use warnings;
 
 # Configuration
 if ($ARGV[0] && $ARGV[0] eq "config") {
-	print "graph_title KVM\n";
-	print "graph_category system\n";
-	print "graph_args -l 0\n";
-	print "used.label used\n";
-	print "used.draw AREA\n";
-	print "free.label free\n";
-	print "free.draw STACK\n";
-	exit(0);
+    print "graph_title KVM\n";
+    print "graph_category system\n";
+    print "graph_args -l 0\n";
+    print "used.label used\n";
+    print "used.draw AREA\n";
+    print "free.label free\n";
+    print "free.draw STACK\n";
+    exit(0);
 }
 
 # Get the data from sysctl
 my $total = 0;
 my $free = 0;
 if (open(SYSCTL, "/sbin/sysctl vm.kvm_size vm.kvm_free |")) {
-	while (<SYSCTL>) {
-		chomp;
-		if (/^vm\.kvm_size: (\d+)/o) {
-			$total = $1;
-		} elsif (/^vm\.kvm_free: (\d+)/o) {
-			$free = $1;
-		}
-	}
-	close(SYSCTL);
+    while (<SYSCTL>) {
+        chomp;
+        if (/^vm\.kvm_size: (\d+)/o) {
+            $total = $1;
+        } elsif (/^vm\.kvm_free: (\d+)/o) {
+            $free = $1;
+        }
+    }
+    close(SYSCTL);
 }
 
 # Turn it into percentages

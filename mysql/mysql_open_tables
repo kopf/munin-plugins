@@ -39,34 +39,34 @@ my $MYSQLOPTS = $ENV{'mysqlopts'} || '';
 my $COMMAND    = $MYSQLADMIN . ' ' . $MYSQLOPTS . ' extended-status';
 
 if (@ARGV && $ARGV[0] eq "config") {
-	print "graph_title MySQL Open Tables\n";
-	print "graph_vlabel %\n";
-	print "graph_category mysql\n";
-	print "graph_total total\n";
-	print "opentables.label opentables\n";
-	exit;
+    print "graph_title MySQL Open Tables\n";
+    print "graph_vlabel %\n";
+    print "graph_category mysql\n";
+    print "graph_total total\n";
+    print "opentables.label opentables\n";
+    exit;
 }
 
 my %mysqladmin;
 if (open(MYSQLADMIN, "$COMMAND |")) {
-	while (<MYSQLADMIN>) {
-		chomp;
-		if (/^\|\s+(.*?)\s+\|\s+(.*?)\s+\|$/o) {
-			$mysqladmin{$1} = $2;
-		}
-	}
-	close(MYSQLADMIN);
+    while (<MYSQLADMIN>) {
+        chomp;
+        if (/^\|\s+(.*?)\s+\|\s+(.*?)\s+\|$/o) {
+            $mysqladmin{$1} = $2;
+        }
+    }
+    close(MYSQLADMIN);
 }
 
 my %mysqlvars;
 if (open(MYSQL, "$MYSQLADMIN $MYSQLOPTS variables |")) {
-	while (<MYSQL>) {
-		chomp;
-		if (/^\|\s+(.*?)\s+\|\s+(.*?)\s+\|$/o) {
-			$mysqlvars{$1} = $2;
-		}
-	}
-	close(MYSQL);
+    while (<MYSQL>) {
+        chomp;
+        if (/^\|\s+(.*?)\s+\|\s+(.*?)\s+\|$/o) {
+            $mysqlvars{$1} = $2;
+        }
+    }
+    close(MYSQL);
 }
 
 print "opentables.value " . (($mysqladmin{'Open_tables'} / $mysqlvars{'table_cache'}) * 100) . "\n";

@@ -35,7 +35,7 @@ use warnings;
 
 # Configuration.
 if (@ARGV && $ARGV[0] eq 'config') {
-	print <<CONFIG;
+    print <<CONFIG;
 graph_title Netstat: TCP: Sent
 graph_category network
 graph_args -l 0 --vertical-label Packets
@@ -77,7 +77,7 @@ retransmitted_unnecessarily.draw STACK
 retransmitted_unnecessarily.info data packets unnecessarily retransmitted
 retransmitted_unnecessarily.type COUNTER
 CONFIG
-	exit 0;
+    exit 0;
 }
 
 # Gather the data.
@@ -91,34 +91,34 @@ my $urg_only = 0;
 my $window_probe = 0;
 my $window_update = 0;
 if (open(NETSTAT, "netstat -s -p tcp |")) {
-	my $sent_stanza = 0;
-	while (<NETSTAT>) {
-		if (/^\s+\d+ packets sent/o && $sent_stanza == 0) {
-			$sent_stanza = 1;
-		} elsif (/^\s+\d+ packets received/o) {
-			$sent_stanza = -1;
-		} elsif ($sent_stanza > 0) {
-			if (/^\s+(\d+)\s+data\s+packets\s+\(\d+ bytes\)\s*$/o) {
-				$sent = $1;
-			} elsif (/^\s+(\d+)\s+data\s+packets\s+\(\d+ bytes\)\s+retransmitted\s*$/o) {
-				$retransmitted = $1;
-			} elsif (/^\s+(\d+)\s+data\s+packets\s+unnecessarily\s+retransmitted\s*$/o) {
-				$retransmitted_unnecessarily = $1;
-			} elsif (/^\s+(\d+)\s+resends\s+initiated\s+by\s+MTU\s+discovery\s*$/o) {
-				$resend_for_mtu = $1;
-			} elsif (/^\s+(\d+)\s+ack-only\s+packets\s+\(\d+\s+delayed\)\s*$/o) {
-				$ack_only = $1;
-			} elsif (/^\s+(\d+)\s+URG\s+only\s+packets\s*$/o) {
-				$urg_only = $1;
-			} elsif (/^\s+(\d+)\s+window\s+probe\s+packets\s*$/o) {
-				$window_probe = $1;
-			} elsif (/^\s+(\d+)\s+window\s+update\s+packets\s*$/o) {
-				$window_update = $1;
-			} elsif (/^\s+(\d+)\s+control\s+packets\s*$/o) {
-				$control = $1;
-			}
-		}
-	}
+    my $sent_stanza = 0;
+    while (<NETSTAT>) {
+        if (/^\s+\d+ packets sent/o && $sent_stanza == 0) {
+            $sent_stanza = 1;
+        } elsif (/^\s+\d+ packets received/o) {
+            $sent_stanza = -1;
+        } elsif ($sent_stanza > 0) {
+            if (/^\s+(\d+)\s+data\s+packets\s+\(\d+ bytes\)\s*$/o) {
+                $sent = $1;
+            } elsif (/^\s+(\d+)\s+data\s+packets\s+\(\d+ bytes\)\s+retransmitted\s*$/o) {
+                $retransmitted = $1;
+            } elsif (/^\s+(\d+)\s+data\s+packets\s+unnecessarily\s+retransmitted\s*$/o) {
+                $retransmitted_unnecessarily = $1;
+            } elsif (/^\s+(\d+)\s+resends\s+initiated\s+by\s+MTU\s+discovery\s*$/o) {
+                $resend_for_mtu = $1;
+            } elsif (/^\s+(\d+)\s+ack-only\s+packets\s+\(\d+\s+delayed\)\s*$/o) {
+                $ack_only = $1;
+            } elsif (/^\s+(\d+)\s+URG\s+only\s+packets\s*$/o) {
+                $urg_only = $1;
+            } elsif (/^\s+(\d+)\s+window\s+probe\s+packets\s*$/o) {
+                $window_probe = $1;
+            } elsif (/^\s+(\d+)\s+window\s+update\s+packets\s*$/o) {
+                $window_update = $1;
+            } elsif (/^\s+(\d+)\s+control\s+packets\s*$/o) {
+                $control = $1;
+            }
+        }
+    }
 }
 
 # Print the output

@@ -38,30 +38,30 @@ my $MYSQLOPTS = $ENV{'mysqlopts'} || '';
 my $COMMAND    = $MYSQLADMIN . ' ' . $MYSQLOPTS . ' extended-status';
 
 if (@ARGV && $ARGV[0] eq "config") {
-	print "graph_title MySQL Slave Status\n";
-	print "graph_vlabel %\n";
-	print "graph_category mysql\n";
-	print "graph_total total\n";
-	print "slavedown.label slave_down\n";
-	print "slavedown.warning 0.5\n";
-	print "slavedown.critical 1\n";
-	exit;
+    print "graph_title MySQL Slave Status\n";
+    print "graph_vlabel %\n";
+    print "graph_category mysql\n";
+    print "graph_total total\n";
+    print "slavedown.label slave_down\n";
+    print "slavedown.warning 0.5\n";
+    print "slavedown.critical 1\n";
+    exit;
 }
 
 my $slave_down = 0;
 if (open(MYSQLADMIN, "$COMMAND |")) {
-	my %mysqladmin;
-	while (<MYSQLADMIN>) {
-		chomp;
-		if (/^\|\s+(.*?)\s+\|\s+(.*?)\s+\|$/o) {
-			$mysqladmin{$1} = $2;
-		}
-	}
-	close(MYSQLADMIN);
+    my %mysqladmin;
+    while (<MYSQLADMIN>) {
+        chomp;
+        if (/^\|\s+(.*?)\s+\|\s+(.*?)\s+\|$/o) {
+            $mysqladmin{$1} = $2;
+        }
+    }
+    close(MYSQLADMIN);
 
-	if (%mysqladmin && $mysqladmin{'Slave_running'} ne 'ON') {
-		$slave_down = 1;
-	}
+    if (%mysqladmin && $mysqladmin{'Slave_running'} ne 'ON') {
+        $slave_down = 1;
+    }
 }
 
 print "slavedown.value $slave_down\n";

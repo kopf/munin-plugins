@@ -32,9 +32,9 @@
 # This is a wildcard plugin. Examples:
 #
 # * Monitor the 'Planar Temp' sensor:
-#		ipmitool_planar-temp
+#        ipmitool_planar-temp
 # * Monitor the 'DIMM Fan' and 'PROC Fan' sensors in the one graph:
-#		ipmi_dimm-fan_proc-fan
+#        ipmi_dimm-fan_proc-fan
 #
 # `ipmitool_ suggest` should tell you what sensors are available on your system.
 #
@@ -50,85 +50,85 @@ my %units;
 my %warning;
 my %critical;
 if (open(IPMITOOL, "$IPMITOOL sensor|")) {
-	while (<IPMITOOL>) {
-		chomp;
-		my($sensor, $value, $units, undef, undef, undef, undef, $warning, $critical) = split(/\s+\|\s+/o);
-		if ($value ne "na") {
-			$sensors{$sensor} = $value;
-			$units{$sensor} = $units;
-			$warning{$sensor} = $warning unless $warning eq 'na';
-			$critical{$sensor} = $critical unless $critical eq 'na';
-		}
-	}
-	close(IPMITOOL);
+    while (<IPMITOOL>) {
+        chomp;
+        my($sensor, $value, $units, undef, undef, undef, undef, $warning, $critical) = split(/\s+\|\s+/o);
+        if ($value ne "na") {
+            $sensors{$sensor} = $value;
+            $units{$sensor} = $units;
+            $warning{$sensor} = $warning unless $warning eq 'na';
+            $critical{$sensor} = $critical unless $critical eq 'na';
+        }
+    }
+    close(IPMITOOL);
 }
 
 # Find the sensors we want by examining the name
 my @wanted_sensors;
 foreach my $sensor (sort keys %sensors) {
-	my $cli_name = &cli_name($sensor);
-	if ($0 =~ /_$cli_name(?:$|_)/) {
-		push @wanted_sensors, [$sensor, $cli_name];
-	}
+    my $cli_name = &cli_name($sensor);
+    if ($0 =~ /_$cli_name(?:$|_)/) {
+        push @wanted_sensors, [$sensor, $cli_name];
+    }
 }
 
 # Select modes depending on the arguments 
 if (@ARGV) {
-	if ($ARGV[0] eq 'suggest') {
-		# Suggestion mode
-		my @cli_sensors;
-		foreach my $sensor (sort keys %sensors) {
-			printf("%s\n", &cli_name($sensor));
-		}
-	} elsif ($ARGV[0] eq 'config') {
-		# Configuration mode
+    if ($ARGV[0] eq 'suggest') {
+        # Suggestion mode
+        my @cli_sensors;
+        foreach my $sensor (sort keys %sensors) {
+            printf("%s\n", &cli_name($sensor));
+        }
+    } elsif ($ARGV[0] eq 'config') {
+        # Configuration mode
 
-		# Make the title
-		my $title = 'IPMI Sensors: ';
-		for (my $i = 0; $i < @wanted_sensors; $i++) {
-			if ($i > 0) {
-				if ($i + 1 == @wanted_sensors) {
-					$title .= ' & ';
-				} else {
-					$title .= ', ';
-				}
-			}
-			$title .= $wanted_sensors[$i][0];
-		}
+        # Make the title
+        my $title = 'IPMI Sensors: ';
+        for (my $i = 0; $i < @wanted_sensors; $i++) {
+            if ($i > 0) {
+                if ($i + 1 == @wanted_sensors) {
+                    $title .= ' & ';
+                } else {
+                    $title .= ', ';
+                }
+            }
+            $title .= $wanted_sensors[$i][0];
+        }
 
-		# Make the y-axis label
-		my %vlabels;
-		foreach (@wanted_sensors) {
-			$vlabels{$units{$_->[0]}} = 1;
-		}
-		my $vlabel = join('/', sort keys %vlabels);
+        # Make the y-axis label
+        my %vlabels;
+        foreach (@wanted_sensors) {
+            $vlabels{$units{$_->[0]}} = 1;
+        }
+        my $vlabel = join('/', sort keys %vlabels);
 
-		# Print the config
-		print <<CONFIG;
+        # Print the config
+        print <<CONFIG;
 graph_title $title
 graph_vlabel $vlabel
 graph_category hardware
 CONFIG
-		foreach (@wanted_sensors) {
-			printf("%s.label %s\n", $_->[1], $_->[0]);
-			printf("%s.warning %s\n", $_->[1], $warning{$_->[0]}) if $warning{$_->[0]};
-			printf("%s.critical %s\n", $_->[1], $critical{$_->[0]}) if $critical{$_->[0]};
-		}
-	}
+        foreach (@wanted_sensors) {
+            printf("%s.label %s\n", $_->[1], $_->[0]);
+            printf("%s.warning %s\n", $_->[1], $warning{$_->[0]}) if $warning{$_->[0]};
+            printf("%s.critical %s\n", $_->[1], $critical{$_->[0]}) if $critical{$_->[0]};
+        }
+    }
 } else {
-	# Output mode
+    # Output mode
 
-	# Get the values
-	foreach my $wanted (@wanted_sensors) {
-		my ($sensor, $cli_name) = @{$wanted};
-		printf("%s.value %s\n", $cli_name, $sensors{$sensor});
-	}
+    # Get the values
+    foreach my $wanted (@wanted_sensors) {
+        my ($sensor, $cli_name) = @{$wanted};
+        printf("%s.value %s\n", $cli_name, $sensors{$sensor});
+    }
 }
 
 # Convert a sensor name into a CLI-friendly name.
 sub cli_name {
-	my $cli_name = shift;
-	$cli_name =~ tr/[A-Z]/[a-z]/;
-	$cli_name =~ s/\W/-/go;
-	return $cli_name;
+    my $cli_name = shift;
+    $cli_name =~ tr/[A-Z]/[a-z]/;
+    $cli_name =~ s/\W/-/go;
+    return $cli_name;
 }

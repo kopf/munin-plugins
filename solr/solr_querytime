@@ -59,40 +59,40 @@ def make_request(path):
     return r.text
 
 def process_data(data, core_name=None):
-	if data:
-		root = etree.fromstring(data)
-		core = root.xpath('/solr/solr-info/QUERYHANDLER')
+    if data:
+        root = etree.fromstring(data)
+        core = root.xpath('/solr/solr-info/QUERYHANDLER')
 
-		for entry in core[0].xpath('entry'):
-			if entry[0].text.strip() == 'standard':
-				stats = entry.xpath('stats')
-				for stat in stats[0]:
-					if stat.get('name') == 'avgTimePerRequest':
-						if core_name:
-							print '%s.value %s' % (core_name, stat.text.strip())
-						else:
-							print 'qtime.value %s' % stat.text.strip()
+        for entry in core[0].xpath('entry'):
+            if entry[0].text.strip() == 'standard':
+                stats = entry.xpath('stats')
+                for stat in stats[0]:
+                    if stat.get('name') == 'avgTimePerRequest':
+                        if core_name:
+                            print '%s.value %s' % (core_name, stat.text.strip())
+                        else:
+                            print 'qtime.value %s' % stat.text.strip()
 
 
 if sys.argv[-1] == 'config':
-	print "graph_title Solr Query time"
-	print "graph_args -l 0"
-	print "graph_vlabel qtime"
-	print "graph_category solr"
-	if CORES:
-		for core in CORES:
-			print "%s.label %s" % (core, core)
-			print "%s.info Query time for the %s core" %(core, core)
-			print "%s.type GAUGE" % core
-	else:
-		print "qtime.label Query time"
-		print "qtime.info Average query time"
-		print "qtime.type GAUGE"
+    print "graph_title Solr Query time"
+    print "graph_args -l 0"
+    print "graph_vlabel qtime"
+    print "graph_category solr"
+    if CORES:
+        for core in CORES:
+            print "%s.label %s" % (core, core)
+            print "%s.info Query time for the %s core" %(core, core)
+            print "%s.type GAUGE" % core
+    else:
+        print "qtime.label Query time"
+        print "qtime.info Average query time"
+        print "qtime.type GAUGE"
 else:
-	if CORES:
-		for core in CORES:
-			data = make_request('/solr/%s/admin/stats.jsp' % core)
-			process_data(data, core)
-	else:
-		data = make_request('/solr/admin/stats.jsp')
-		process_data(data)
+    if CORES:
+        for core in CORES:
+            data = make_request('/solr/%s/admin/stats.jsp' % core)
+            process_data(data, core)
+    else:
+        data = make_request('/solr/admin/stats.jsp')
+        process_data(data)

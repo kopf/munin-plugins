@@ -35,37 +35,37 @@ use warnings;
 
 # Configuration
 if ($ARGV[0] && $ARGV[0] eq "config") {
-	print "graph_title PV Entries\n";
-	print "graph_category system\n";
-	print "graph_args -l 0\n";
-	print "used.label used\n";
-	print "used.draw AREA\n";
-	print "used.warning 75\n";
-	print "used.critical 90\n";
-	print "free.label free\n";
-	print "free.draw STACK\n";
-	exit(0);
+    print "graph_title PV Entries\n";
+    print "graph_category system\n";
+    print "graph_args -l 0\n";
+    print "used.label used\n";
+    print "used.draw AREA\n";
+    print "used.warning 75\n";
+    print "used.critical 90\n";
+    print "free.label free\n";
+    print "free.draw STACK\n";
+    exit(0);
 }
 
 # Get the data from sysctl
 my $total = 0;
 my $used = 0;
 if (open(SYSCTL, "/sbin/sysctl vm.pmap.pv_entry_count vm.pmap.pv_entry_max 2>&1 |")) {
-	while (<SYSCTL>) {
-		chomp;
-		if (/^vm\.pmap\.pv_entry_max: (\d+)/o) {
-			$total = $1;
-		} elsif (/^vm\.pmap\.pv_entry_count: (\d+)/o) {
-			$used = $1;
-		}
-	}
-	close(SYSCTL);
+    while (<SYSCTL>) {
+        chomp;
+        if (/^vm\.pmap\.pv_entry_max: (\d+)/o) {
+            $total = $1;
+        } elsif (/^vm\.pmap\.pv_entry_count: (\d+)/o) {
+            $used = $1;
+        }
+    }
+    close(SYSCTL);
 }
 
 # Turn it into percentages
 my $used_pc = sprintf("%.3f", ($total > 0 ? (($used / $total) * 100) : 0));
 if ($used_pc > 100) {
-	$used_pc = 100;
+    $used_pc = 100;
 }
 my $free_pc = sprintf("%.3f", 100 - $used_pc);
 

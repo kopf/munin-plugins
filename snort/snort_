@@ -32,7 +32,7 @@
 # This is a wildcard plugin. Examples:
 #
 # * Monitor the number of alerts per second:
-#		snort_alerts-sec
+#        snort_alerts-sec
 #
 # `snort_ suggest` lists all the available options
 #
@@ -47,62 +47,62 @@ my $TAIL = $ENV{'tail'} || '/usr/bin/tail';
 
 # All the columns we want to support
 my %COL = (
-	"pkts-dropped-pct" => { "index" => 1, "description" => "%pkts dropped" },
-	"mbits-sec" => { "index" => 2, "description" => "mbits/sec (wire)" },
-	"alerts-sec" => { "index" => 3, "description" => "alerts/sec" },
+    "pkts-dropped-pct" => { "index" => 1, "description" => "%pkts dropped" },
+    "mbits-sec" => { "index" => 2, "description" => "mbits/sec (wire)" },
+    "alerts-sec" => { "index" => 3, "description" => "alerts/sec" },
 );
 
 # Find out the columns which are wanted for this wildcard plugin
 my @cols_wanted;
 foreach my $col (sort keys %COL) {
-	if ($0 =~ /_$col(?:_|$)/) {
-		push @cols_wanted, $col;
-	}
+    if ($0 =~ /_$col(?:_|$)/) {
+        push @cols_wanted, $col;
+    }
 }
 
 # Deal with config, suggest, etc
 if (@ARGV) {
-	if ($ARGV[0] eq 'config') {
-		printf("graph_title Snort: %s\n", join(', ', @cols_wanted));
-		print "graph_category security\n";
-		foreach my $col (@cols_wanted) {
-			printf("%s.label %s\n", &munin_name($col), $COL{$col}{'description'});
-		}
-	} elsif ($ARGV[0] eq 'suggest') {
-		foreach (sort keys %COL) {
-			print "$_\n";
-		}
-	} else {
-		print "Bad args\n";
-	}
-	exit(0);
+    if ($ARGV[0] eq 'config') {
+        printf("graph_title Snort: %s\n", join(', ', @cols_wanted));
+        print "graph_category security\n";
+        foreach my $col (@cols_wanted) {
+            printf("%s.label %s\n", &munin_name($col), $COL{$col}{'description'});
+        }
+    } elsif ($ARGV[0] eq 'suggest') {
+        foreach (sort keys %COL) {
+            print "$_\n";
+        }
+    } else {
+        print "Bad args\n";
+    }
+    exit(0);
 }
 
 # Read the values and average each field.
 my @fields;
 if (open(SNORTSTATS, "$TAIL -n $SAMPLES $SNORT_STATS |")) {
-	while (<SNORTSTATS>) {
-		chomp;
-		my @f = split /,/o;
-		for (my $i = 0; $i < @f; $i++) {
-			$fields[$i] += $f[$i];
-		}
-	}
+    while (<SNORTSTATS>) {
+        chomp;
+        my @f = split /,/o;
+        for (my $i = 0; $i < @f; $i++) {
+            $fields[$i] += $f[$i];
+        }
+    }
 }
 for (my $i = 0; $i < @fields; $i++) {
-	$fields[$i] /= 5;
+    $fields[$i] /= 5;
 }
 
 # Now print the fields that we want.
 foreach my $col (@cols_wanted) {
-	printf("%s.value %f\n", &munin_name($col), $fields[$COL{$col}{'index'}]);
+    printf("%s.value %f\n", &munin_name($col), $fields[$COL{$col}{'index'}]);
 }
 
 # Convert a name to a name safe to use for munin data items.
 sub munin_name {
-	my $name = shift;
-	$name =~ s/^\W+//o;
-	$name =~ s/\W+$//o;
-	$name =~ s/\W+/_/o;
-	return $name;
+    my $name = shift;
+    $name =~ s/^\W+//o;
+    $name =~ s/\W+$//o;
+    $name =~ s/\W+/_/o;
+    return $name;
 }

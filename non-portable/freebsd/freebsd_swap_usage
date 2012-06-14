@@ -35,31 +35,31 @@ use warnings;
 
 my %devices;
 if (open(SWAPCTL, "/sbin/swapctl -lk|")) {
-	while (<SWAPCTL>) {
-		if (!/^Device:\s+/o) {
-			my ($dev, $size, $used) = split;
-			my $name = $dev;
-			$dev =~ s/\W+/_/go;
-			$devices{$dev}{'size'} = ($size * 1024);
-			$devices{$dev}{'used'} = ($used * 1024);
-			$devices{$dev}{'name'} = $name;
-		}
-	}
-	close(SWAPCTL);
+    while (<SWAPCTL>) {
+        if (!/^Device:\s+/o) {
+            my ($dev, $size, $used) = split;
+            my $name = $dev;
+            $dev =~ s/\W+/_/go;
+            $devices{$dev}{'size'} = ($size * 1024);
+            $devices{$dev}{'used'} = ($used * 1024);
+            $devices{$dev}{'name'} = $name;
+        }
+    }
+    close(SWAPCTL);
 }
 
 if (@ARGV && $ARGV[0] eq 'config') {
-	print "graph_title Swap Usage\n";
-	print "graph_args -l 0 --base 1024\n";
-	print "graph_vlabel bytes\n";
-	print "graph_category disk\n";
-	foreach (sort keys %devices) {
-		printf("%s.label %s\n", $_, $devices{$_}{'name'});
-		printf("%s.warning %d\n", $_, ($devices{$_}{'size'} * 0.50));
-		printf("%s.critical %d\n", $_, ($devices{$_}{'size'} * 0.80));
-	}
+    print "graph_title Swap Usage\n";
+    print "graph_args -l 0 --base 1024\n";
+    print "graph_vlabel bytes\n";
+    print "graph_category disk\n";
+    foreach (sort keys %devices) {
+        printf("%s.label %s\n", $_, $devices{$_}{'name'});
+        printf("%s.warning %d\n", $_, ($devices{$_}{'size'} * 0.50));
+        printf("%s.critical %d\n", $_, ($devices{$_}{'size'} * 0.80));
+    }
 } else {
-	foreach (sort keys %devices) {
-		printf("%s.value %d\n", $_, $devices{$_}{'used'});
-	}
+    foreach (sort keys %devices) {
+        printf("%s.value %d\n", $_, $devices{$_}{'used'});
+    }
 }

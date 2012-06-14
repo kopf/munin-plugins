@@ -41,9 +41,9 @@ use warnings;
 # Figure out which stat we're tracking
 my $name;
 if ($0 =~ /freebsd_vmstatz_(.*)$/o) {
-	$name = $1;
+    $name = $1;
 } else {
-	exit(1);
+    exit(1);
 }
 
 # Get the data from vmstat
@@ -51,33 +51,33 @@ my $used = 0;
 my $cached = 0;
 my $limit = 0;
 if (open(SYSCTL, "vmstat -z |")) {
-	my $size;
-	while (<SYSCTL>) {
-		if (/^$name:\s*(\d+),\s+(\d+),\s+(\d+),\s+(\d+),/o) {
-			($size, $limit, $used, $cached) = ($1, $2, $3, $4);
-			$used *= $size;
-			$cached *= $size;
-			$limit *= $size;
-		}
-	}
-	close(SYSCTL);
+    my $size;
+    while (<SYSCTL>) {
+        if (/^$name:\s*(\d+),\s+(\d+),\s+(\d+),\s+(\d+),/o) {
+            ($size, $limit, $used, $cached) = ($1, $2, $3, $4);
+            $used *= $size;
+            $cached *= $size;
+            $limit *= $size;
+        }
+    }
+    close(SYSCTL);
 }
 
 if ($ARGV[0] && $ARGV[0] eq "config") {
-	print "graph_title VMStat: $name\n";
-	print "graph_category system\n";
-	print "graph_args --base 1024 -l 0 --vertical-label Bytes\n";
-	print "graph_order used cached\n";
-	print "used.label used\n";
-	print "used.draw AREA\n";
-	if ($limit > 0) {
-		printf("used.warning %d\n", ($limit * 0.75));
-		printf("used.critical %d\n", ($limit * 0.9));
-	}
-	print "cached.label free\n";
-	print "cached.draw STACK\n";
-	exit(0);
+    print "graph_title VMStat: $name\n";
+    print "graph_category system\n";
+    print "graph_args --base 1024 -l 0 --vertical-label Bytes\n";
+    print "graph_order used cached\n";
+    print "used.label used\n";
+    print "used.draw AREA\n";
+    if ($limit > 0) {
+        printf("used.warning %d\n", ($limit * 0.75));
+        printf("used.critical %d\n", ($limit * 0.9));
+    }
+    print "cached.label free\n";
+    print "cached.draw STACK\n";
+    exit(0);
 } else {
-	print "used.value $used\n";
-	print "cached.value $cached\n";
+    print "used.value $used\n";
+    print "cached.value $cached\n";
 }

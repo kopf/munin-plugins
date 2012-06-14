@@ -40,10 +40,10 @@ SERVER = os.getenv('solr_server')
 PORT = os.getenv('solr_port')
 CORES = os.getenv('solr_cores')
 if CORES:
-	CORES = CORES.split(',')
+    CORES = CORES.split(',')
 AUTH = os.getenv('solr_auth')
 if AUTH:
-	AUTH = tuple(AUTH.split(':'))
+    AUTH = tuple(AUTH.split(':'))
 
 def make_request(path):
     try:
@@ -60,34 +60,34 @@ def make_request(path):
     return r.text
 
 def process_data(data, core=None):
-	if data:
-		soup = BeautifulSoup(data)
-		value = soup.find('stat', {'name': 'numDocs'}).text
-		if core:
-			print "%s.value %s" %(core, value)
-		else:
-			print "docs.value %s" % value
-							
+    if data:
+        soup = BeautifulSoup(data)
+        value = soup.find('stat', {'name': 'numDocs'}).text
+        if core:
+            print "%s.value %s" %(core, value)
+        else:
+            print "docs.value %s" % value
+                            
 
 if sys.argv[-1] == 'config':
-	print "graph_title Solr Docs"
-	print "graph_vlabel docs"
-	if CORES:
-		for core in CORES:
-			print "%s.label %s" %(core, core)
-			print "%s.info Number of documents in the %s core" %(core, core)
-			print "%s.type GAUGE" % core
-	else:
-		print "docs.label Docs"
-		print "docs.info Number of documents in the core"
-		print "docs.type GAUGE"
-	print "graph_category solr"
+    print "graph_title Solr Docs"
+    print "graph_vlabel docs"
+    if CORES:
+        for core in CORES:
+            print "%s.label %s" %(core, core)
+            print "%s.info Number of documents in the %s core" %(core, core)
+            print "%s.type GAUGE" % core
+    else:
+        print "docs.label Docs"
+        print "docs.info Number of documents in the core"
+        print "docs.type GAUGE"
+    print "graph_category solr"
 else:
-	if CORES:
-		for core in CORES:
-			data = make_request('/solr/%s/admin/stats.jsp' % core)
-			process_data(data, core)
-	else:
-		data = make_request('/solr/admin/stats.jsp')
-		process_data(data)
+    if CORES:
+        for core in CORES:
+            data = make_request('/solr/%s/admin/stats.jsp' % core)
+            process_data(data, core)
+    else:
+        data = make_request('/solr/admin/stats.jsp')
+        process_data(data)
 
